@@ -1,7 +1,8 @@
 <h1>Scheduler</h1>
 
 <p>
-Task-manager for real-time C++ applications using my <a href="https://github.com/svenbieg/Default">standard-library</a>.<br />
+This is my task-manager for real-time C++ applications.<br />
+You need my <a href="https://github.com/svenbieg/Default">standard-library</a> to compile.<br />
 </p>
 <br />
 
