@@ -25,6 +25,6 @@ You need my <a href="https://github.com/svenbieg/Default">standard-library</a> t
 </table><br />
 
 <p>
-You can find a Blink-example for Raspberry Pi 5 <a href="https://github.com/svenbieg/Blink">here</a>.
+There is a <a href="https://github.com/svenbieg/Blink">Blink</a>-example for Raspberry Pi 5.
 </p>
 <br />
