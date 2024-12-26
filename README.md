@@ -1,8 +1,9 @@
 <h1>Scheduler</h1>
 
 <p>
-This is my task-manager for real-time C++ applications.<br />
-You need my <a href="https://github.com/svenbieg/Default">standard-library</a> to compile it.<br />
+This task-manager provides basic functionality for real-time C++ applications.<br />
+You can find a Blink-example for Raspberry Pi 5 <a href="https://github.com/svenbieg/Blink">here</a>.
+
 </p>
 <br />
 
@@ -13,18 +14,13 @@ You need my <a href="https://github.com/svenbieg/Default">standard-library</a> t
 
 <table>
   <tr>
-    <td><a href="https://github.com/svenbieg/Scheduler/wiki/Scheduler#critical-section">CriticalSection</a></td>
+    <td><a href="https://github.com/svenbieg/Scheduler/wiki#critical-section">CriticalSection</a></td>
     <td>Used with a SpinLock, keeping other cores in a loop while scheduling</td>
   </tr><tr><td></td></tr><tr>
-    <td><a href="https://github.com/svenbieg/Scheduler/wiki/Scheduler#mutex">Mutex</a></td>
+    <td><a href="https://github.com/svenbieg/Scheduler/wiki#mutex">Mutex</a></td>
     <td>Suspending other tasks when held by a ScopedLock, a SharedLock or a TaskLock</td>
   </tr><tr><td></td></tr><tr>
-    <td><a href="https://github.com/svenbieg/Scheduler/wiki/Scheduler#signal">Signal</a></td>
+    <td><a href="https://github.com/svenbieg/Scheduler/wiki#signal">Signal</a></td>
     <td>Used to synchronize tasks</td>
   </tr>
 </table><br />
-
-<p>
-Here is a <a href="https://github.com/svenbieg/Blink">Blink</a>-example for Raspberry Pi 5.
-</p>
-<br />
