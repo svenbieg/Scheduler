@@ -3,7 +3,6 @@
 <p>
 This task-manager provides basic functionality for real-time C++ applications.<br />
 You can find a Blink-example for Raspberry Pi 5 <a href="https://github.com/svenbieg/Blink">here</a>.
-
 </p>
 <br />
 
@@ -24,3 +23,8 @@ You can find a Blink-example for Raspberry Pi 5 <a href="https://github.com/sven
     <td>Used to synchronize tasks</td>
   </tr>
 </table><br />
+
+<p>
+You can find detailed information in the <a href="https://github.com/svenbieg/Scheduler/wiki">Wiki</a>
+</p>
+<br />
