@@ -25,6 +25,6 @@ You can find a Blink-example for Raspberry Pi 5 <a href="https://github.com/sven
 </table><br />
 
 <p>
-You can find detailed information in the <a href="https://github.com/svenbieg/Scheduler/wiki">Wiki</a>
+For more information please visit the <a href="https://github.com/svenbieg/Scheduler/wiki">Wiki</a>
 </p>
 <br />
