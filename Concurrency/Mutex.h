@@ -29,6 +29,21 @@ class SharedLock;
 class Task;
 
 
+//========
+// Access
+//========
+
+enum class AccessMode
+{
+ReadOnly
+};
+
+enum class AccessPriority
+{
+High
+};
+
+
 //=======
 // Mutex
 //=======
@@ -45,14 +60,14 @@ public:
 
 	// Common
 	VOID Lock();
-	VOID LockBlocking();
-	VOID LockShared();
+	VOID Lock(AccessMode);
+	VOID Lock(AccessPriority);
 	BOOL TryLock();
-	BOOL TryLockBlocking();
-	BOOL TryLockShared();
+	BOOL TryLock(AccessMode);
+	BOOL TryLock(AccessPriority);
 	VOID Unlock();
-	VOID UnlockBlocking();
-	VOID UnlockShared();
+	VOID Unlock(AccessMode);
+	VOID Unlock(AccessPriority);
 
 protected:
 	// Common
@@ -61,7 +76,7 @@ protected:
 private:
 	// Common
 	VOID Yield(SpinLock& Lock);
-	VOID YieldShared(SpinLock& Lock);
+	VOID Yield(SpinLock& Lock, AccessMode);
 };
 
 }

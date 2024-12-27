@@ -10,7 +10,6 @@
 //=======
 
 #include "Devices/System/Cpu.h"
-#include "MainTask.h"
 #include "Scheduler.h"
 #include "Signal.h"
 #include "SpinLock.h"
