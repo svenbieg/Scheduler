@@ -92,6 +92,7 @@ public:
 		DispatchedHandler::Append(&m_Then, new DispatchedLambda(Owner, std::forward<_lambda_t>(Lambda)));
 		}
 	inline Status GetStatus()const { return m_Status; }
+	Handle<Object> Result;
 	static VOID Sleep(UINT Milliseconds);
 	static VOID SleepMicroseconds(UINT Microseconds);
 	static inline VOID ThrowIfMain()
