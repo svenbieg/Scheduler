@@ -61,16 +61,20 @@ public:
 	friend Signal;
 
 	// Con-/Destructors
-	static Handle<Task> Create(VOID (*Procedure)());
-	template <class _owner_t> static Handle<Task> Create(_owner_t* Owner, VOID (_owner_t::*Procedure)());
-	template <class _owner_t> static Handle<Task> Create(Handle<_owner_t> const& Owner, VOID (_owner_t::*Procedure)());
-	template <class _owner_t, class _lambda_t> static Handle<Task> Create(_owner_t* Owner, _lambda_t&& Lambda);
-	template <class _owner_t, class _lambda_t> static Handle<Task> Create(Handle<_owner_t> const& Owner, _lambda_t&& Lambda);
+	static Handle<Task> Create(VOID (*Procedure)(), Handle<String> Name="task", UINT StackSize=PAGE_SIZE);
+	template <class _owner_t> static Handle<Task> Create(_owner_t* Owner, VOID (_owner_t::*Procedure)(), Handle<String> Name="task", UINT StackSize=PAGE_SIZE);
+	template <class _owner_t> static Handle<Task> Create(Handle<_owner_t> const& Owner, VOID (_owner_t::*Procedure)(), Handle<String> Name="task", UINT StackSize=PAGE_SIZE);
+	template <class _owner_t, class _lambda_t> static Handle<Task> Create(_owner_t* Owner, _lambda_t&& Lambda, Handle<String> Name="task", UINT StackSize=PAGE_SIZE);
+	template <class _owner_t, class _lambda_t> static Handle<Task> Create(Handle<_owner_t> const& Owner, _lambda_t&& Lambda, Handle<String> Name="task", UINT StackSize=PAGE_SIZE);
 
 	// Common
 	VOID Cancel();
 	volatile BOOL Cancelled;
 	static Handle<Task> Get();
+	inline Status GetStatus()const { return m_Status; }
+	Handle<Object> Result;
+	static VOID Sleep(UINT Milliseconds);
+	static VOID SleepMicroseconds(UINT Microseconds);
 	inline VOID Then(VOID (*Procedure)())
 		{
 		DispatchedHandler::Append(&m_Then, new DispatchedProcedure(Procedure));
@@ -91,10 +95,6 @@ public:
 		{
 		DispatchedHandler::Append(&m_Then, new DispatchedLambda(Owner, std::forward<_lambda_t>(Lambda)));
 		}
-	inline Status GetStatus()const { return m_Status; }
-	Handle<Object> Result;
-	static VOID Sleep(UINT Milliseconds);
-	static VOID SleepMicroseconds(UINT Microseconds);
 	static inline VOID ThrowIfMain()
 		{
 		if(Scheduler::IsMainTask())
@@ -104,12 +104,15 @@ public:
 
 protected:
 	// Con-/Destructors
-	Task();
+	Task(Handle<String> Name, VOID* StackEnd, UINT StackSize);
 
 	// Common
 	Status m_Status;
 
 private:
+	// Con-/Destructors
+	static Handle<Task> CreateInternal(VOID (*Procedure)(), Handle<String> Name, UINT StackSize=PAGE_SIZE);
+
 	// Common
 	inline VOID ClearFlag(TaskFlags Flag) { FlagHelper::Clear(m_Flags, Flag); }
 	inline BOOL GetFlag(TaskFlags Flag)const { return FlagHelper::Get(m_Flags, Flag); }
@@ -120,14 +123,15 @@ private:
 	Signal m_Done;
 	TaskFlags m_Flags;
 	Mutex m_Mutex;
+	Handle<String> m_Name;
 	Handle<Task> m_Next;
 	Handle<Task> m_Owner;
 	Handle<Task> m_Parallel;
 	UINT64 m_ResumeTime;
 	VOID* m_StackPointer;
+	UINT m_StackSize;
 	Handle<DispatchedHandler> m_Then;
 	Handle<Task> m_Waiting;
-	ALIGN(sizeof(SIZE_T)) BYTE m_Stack[STACK_SIZE];
 };
 
 
@@ -142,7 +146,8 @@ public:
 	typedef VOID (*_proc_t)();
 
 	// Con-/Destructors
-	TaskProcedure(_proc_t Procedure):
+	TaskProcedure(_proc_t Procedure, Handle<String> Name, VOID* StackEnd, UINT StackSize):
+		Task(Name, StackEnd, StackSize),
 		m_Procedure(Procedure)
 		{}
 
@@ -164,7 +169,8 @@ public:
 	typedef VOID (_owner_t::*_proc_t)();
 
 	// Con-/Destructors
-	TaskMemberProcedure(_owner_t* Owner, _proc_t Procedure):
+	TaskMemberProcedure(_owner_t* Owner, _proc_t Procedure, Handle<String> Name, VOID* StackEnd, UINT StackSize):
+		Task(Name, StackEnd, StackSize),
 		m_Owner(Owner),
 		m_Procedure(Procedure)
 		{}
@@ -185,7 +191,8 @@ template <class _owner_t, class _lambda_t> class TaskLambda: public Task
 {
 public:
 	// Con-/Destructors
-	TaskLambda(_owner_t* Owner, _lambda_t&& Lambda):
+	TaskLambda(_owner_t* Owner, _lambda_t&& Lambda, Handle<String> Name, VOID* StackEnd, UINT StackSize):
+		Task(Name, StackEnd, StackSize),
 		m_Lambda(std::move(Lambda)),
 		m_Owner(Owner)
 		{}
@@ -202,38 +209,77 @@ private:
 // Con-/Destructors
 //==================
 
-inline Handle<Task> Task::Create(VOID (*Procedure)())
+inline Handle<Task> Task::Create(VOID (*Procedure)(), Handle<String> Name, UINT StackSize)
 {
-auto task=new TaskProcedure(Procedure);
+assert(StackSize%sizeof(SIZE_T)==0);
+UINT size=TypeHelper::AlignUp(sizeof(TaskProcedure), sizeof(SIZE_T))+StackSize;
+auto task=(TaskProcedure*)operator new(size);
+VOID* stack_end=(VOID*)((SIZE_T)task+size);
+new (task) TaskProcedure(Procedure, Name, stack_end, StackSize);
 Scheduler::AddTask(task);
 return task;
 }
 
-template <class _owner_t> inline Handle<Task> Task::Create(_owner_t* Owner, VOID (_owner_t::*Procedure)())
+template <class _owner_t> inline Handle<Task> Task::Create(_owner_t* Owner, VOID (_owner_t::*Procedure)(), Handle<String> Name, UINT StackSize)
 {
-auto task=new TaskMemberProcedure(Owner, Procedure);
+assert(StackSize%sizeof(SIZE_T)==0);
+using _task_t=TaskMemberProcedure<_owner_t>;
+UINT size=TypeHelper::AlignUp(sizeof(_task_t), sizeof(SIZE_T))+StackSize;
+auto task=(_task_t*)operator new(size);
+VOID* stack_end=(VOID*)((SIZE_T)task+size);
+new (task) _task_t(Owner, Procedure, Name, stack_end, StackSize);
 Scheduler::AddTask(task);
 return task;
 }
 
-template <class _owner_t> inline Handle<Task> Task::Create(Handle<_owner_t> const& Owner, VOID (_owner_t::*Procedure)())
+template <class _owner_t> inline Handle<Task> Task::Create(Handle<_owner_t> const& Owner, VOID (_owner_t::*Procedure)(), Handle<String> Name, UINT StackSize)
 {
-auto task=new TaskMemberProcedure(Owner, Procedure);
+assert(StackSize%sizeof(SIZE_T)==0);
+using _task_t=TaskMemberProcedure<_owner_t>;
+UINT size=TypeHelper::AlignUp(sizeof(_task_t), sizeof(SIZE_T))+StackSize;
+auto task=(_task_t*)operator new(size);
+VOID* stack_end=(VOID*)((SIZE_T)task+size);
+new (task) _task_t(Owner, Procedure, Name, stack_end, StackSize);
 Scheduler::AddTask(task);
 return task;
 }
 
-template <class _owner_t, class _lambda_t> inline Handle<Task> Task::Create(_owner_t* Owner, _lambda_t&& Lambda)
+template <class _owner_t, class _lambda_t> inline Handle<Task> Task::Create(_owner_t* Owner, _lambda_t&& Lambda, Handle<String> Name, UINT StackSize)
 {
-auto task=new TaskLambda<_owner_t, _lambda_t>(Owner, std::forward<_lambda_t>(Lambda));
+assert(StackSize%sizeof(SIZE_T)==0);
+using _task_t=TaskLambda<_owner_t, _lambda_t>;
+UINT size=TypeHelper::AlignUp(sizeof(_task_t), sizeof(SIZE_T))+StackSize;
+auto task=(_task_t*)operator new(size);
+VOID* stack_end=(VOID*)((SIZE_T)task+size);
+new (task) _task_t(Owner, std::forward<_lambda_t>(Lambda), Name, stack_end, StackSize);
 Scheduler::AddTask(task);
 return task;
 }
 
-template <class _owner_t, class _lambda_t> inline Handle<Task> Task::Create(Handle<_owner_t> const& Owner, _lambda_t&& Lambda)
+template <class _owner_t, class _lambda_t> inline Handle<Task> Task::Create(Handle<_owner_t> const& Owner, _lambda_t&& Lambda, Handle<String> Name, UINT StackSize)
 {
-auto task=new TaskLambda<_owner_t, _lambda_t>(Owner, std::forward<_lambda_t>(Lambda));
+assert(StackSize%sizeof(SIZE_T)==0);
+using _task_t=TaskLambda<_owner_t, _lambda_t>;
+UINT size=TypeHelper::AlignUp(sizeof(_task_t), sizeof(SIZE_T))+StackSize;
+auto task=(_task_t*)operator new(size);
+VOID* stack_end=(VOID*)((SIZE_T)task+size);
+new (task) _task_t(Owner, std::forward<_lambda_t>(Lambda), Name, stack_end, StackSize);
 Scheduler::AddTask(task);
+return task;
+}
+
+
+//==========================
+// Con-/Destructors Private
+//==========================
+
+inline Handle<Task> Task::CreateInternal(VOID (*Procedure)(), Handle<String> Name, UINT StackSize)
+{
+assert(StackSize%sizeof(SIZE_T)==0);
+UINT size=TypeHelper::AlignUp(sizeof(TaskProcedure), sizeof(SIZE_T))+StackSize;
+auto task=(TaskProcedure*)operator new(size);
+VOID* stack_end=(VOID*)((SIZE_T)task+size);
+new (task) TaskProcedure(Procedure, Name, stack_end, StackSize);
 return task;
 }
 

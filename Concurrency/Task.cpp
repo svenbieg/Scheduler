@@ -9,6 +9,7 @@
 // Using
 //=======
 
+#include <task.h>
 #include "Concurrency/TaskLock.h"
 #include "Devices/Timers/SystemTimer.h"
 #include "Scheduler.h"
@@ -69,15 +70,19 @@ return m_Status;
 // Con-/Destructors Protected
 //============================
 
-Task::Task():
+Task::Task(Handle<String> name, VOID* stack_end, UINT stack_size):
 Cancelled(false),
 m_Status(Status::Pending),
 // Private
 m_BlockingCount(0),
 m_Flags(TaskFlags::None),
+m_Name(name),
 m_ResumeTime(0),
-m_StackPointer(&m_Stack[STACK_SIZE])
-{}
+m_StackPointer(stack_end),
+m_StackSize(stack_size)
+{
+task_init(&m_StackPointer, TaskProc, this);
+}
 
 
 //================

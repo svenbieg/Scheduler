@@ -12,7 +12,6 @@
 #include "Devices/System/Cpu.h"
 #include "Devices/System/Interrupts.h"
 #include "Devices/System/System.h"
-#include "Devices/System/Tasks.h"
 #include "Devices/Timers/SystemTimer.h"
 #include "Scheduler.h"
 #include "SpinLock.h"
@@ -37,7 +36,6 @@ namespace Concurrency {
 
 VOID Scheduler::AddTask(Task* task)
 {
-InitializeTask(&task->m_StackPointer, &Task::TaskProc, task);
 SpinLock lock(s_CriticalSection);
 UINT core=Cpu::GetId();
 auto current=s_CurrentTask[core];
@@ -81,16 +79,15 @@ Interrupts::Route(IRQ_TASK_SWITCH, IrqTarget::All);
 Interrupts::SetHandler(IRQ_TASK_SWITCH, HandleTaskSwitch);
 for(UINT core=0; core<CPU_COUNT; core++)
 	{
-	Handle<Task> idle=new TaskProcedure(IdleTask);
-	InitializeTask(&idle->m_StackPointer, &Task::TaskProc, idle);
+	auto idle=Task::CreateInternal(IdleTask, String::Create("idle%u", core));
 	idle->SetFlag(TaskFlags::Remove);
 	s_IdleTask[core]=idle;
 	s_CurrentTask[core]=idle;
 	}
-s_MainTask=new TaskProcedure(MainTask);
-s_MainTask->Then(System::Restart);
-InitializeTask(&s_MainTask->m_StackPointer, &Task::TaskProc, s_MainTask);
-s_CurrentTask[0]=s_MainTask;
+auto main=Task::CreateInternal(MainTask, "main");
+main->Then(System::Restart);
+s_CurrentTask[0]=main;
+s_MainTask=main;
 }
 
 BOOL Scheduler::IsMainTask()

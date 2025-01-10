@@ -9,9 +9,9 @@
 // Using
 //=======
 
+#include <config.h>
 #include "CriticalSection.h"
 #include "Mutex.h"
-#include "Settings.h"
 
 
 //===========
