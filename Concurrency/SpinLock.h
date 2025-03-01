@@ -10,6 +10,7 @@
 //=======
 
 #include "CriticalSection.h"
+#include "ScopedLock.h"
 
 
 //===========
@@ -23,27 +24,22 @@ namespace Concurrency {
 // Spin-Lock
 //===========
 
-class SpinLock
+class SpinLock: public ScopedLock
 {
 public:
 	// Con-/Destructors
-	inline SpinLock(CriticalSection& CriticalSection):
-		m_CriticalSection(&CriticalSection)
-		{
-		Lock();
-		}
-	inline ~SpinLock()
-		{
-		Unlock();
-		}
+	SpinLock(CriticalSection& CriticalSection);
+	~SpinLock();
 
 	// Common
-	inline VOID Lock() { m_CriticalSection->Lock(); }
-	inline VOID Unlock() { m_CriticalSection->Unlock(); }
-	inline VOID Yield() { Unlock(); Lock(); }
+	inline VOID Lock()override { m_CriticalSection->Lock(); }
+	inline BOOL TryLock()override { return m_CriticalSection->TryLock(); }
+	inline VOID Unlock()override { m_CriticalSection->Unlock(); }
+	inline VOID Yield() { m_CriticalSection->Yield(); }
 
 private:
 	// Common
+	VOID Yield(SpinLock& Lock);
 	CriticalSection* m_CriticalSection;
 };
 

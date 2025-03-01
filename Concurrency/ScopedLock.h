@@ -5,18 +5,19 @@
 #pragma once
 
 
-//=======
-// Using
-//=======
-
-#include "Mutex.h"
-
-
 //===========
 // Namespace
 //===========
 
 namespace Concurrency {
+
+
+//======================
+// Forward-Declarations
+//======================
+
+class Signal;
+class SpinLock;
 
 
 //=============
@@ -27,35 +28,23 @@ class ScopedLock
 {
 public:
 	// Friends
-	friend class Signal;
+	friend Signal;
 
 	// Con-/Destructors
-	inline ScopedLock(Mutex& Mutex): m_Mutex(&Mutex)
-		{
-		m_Mutex->Lock();
-		}
-	virtual inline ~ScopedLock()
-		{
-		if(m_Mutex)
-			m_Mutex->Unlock();
-		}
+	virtual ~ScopedLock() {}
 
 	// Common
-	virtual inline VOID Lock() { m_Mutex->Lock(); }
-	inline VOID Release() { m_Mutex=nullptr; }
-	virtual inline BOOL TryLock() { return m_Mutex->TryLock(); }
-	virtual inline VOID Unlock() { m_Mutex->Unlock(); }
+	virtual VOID Lock()=0;
+	virtual BOOL TryLock()=0;
+	virtual VOID Unlock()=0;
 
 protected:
 	// Con-/Destructors
 	ScopedLock() {}
 
-	// Common
-	Mutex* m_Mutex;
-
 private:
 	// Common
-	virtual inline VOID Yield(SpinLock& Lock) { m_Mutex->Yield(Lock); }
+	virtual VOID Yield(SpinLock& Lock)=0;
 };
 
 }
