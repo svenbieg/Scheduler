@@ -35,7 +35,7 @@ SpinLock lock(Scheduler::s_CriticalSection);
 UINT core=Cpu::GetId();
 auto current=Scheduler::s_CurrentTask[core];
 assert(!FlagHelper::Get(current->m_Flags, TaskFlags::Sharing));
-if(Scheduler::AddWaitingTask(&m_Owner, current))
+if(AddWaitingTask(current))
 	Scheduler::SuspendCurrentTask(core, current);
 }
 
@@ -47,7 +47,7 @@ UINT core=Cpu::GetId();
 auto current=Scheduler::s_CurrentTask[core];
 assert(!FlagHelper::Get(current->m_Flags, TaskFlags::Sharing));
 FlagHelper::Set(current->m_Flags, TaskFlags::Sharing);
-if(Scheduler::AddWaitingTask(&m_Owner, current, AccessMode::ReadOnly))
+if(AddWaitingTask(current, AccessMode::ReadOnly))
 	Scheduler::SuspendCurrentTask(core, current);
 }
 
@@ -110,6 +110,77 @@ if(m_Owner)
 }
 
 
+//==================
+// Common Protected
+//==================
+
+BOOL Mutex::AddWaitingTask(Task* task)
+{
+BOOL locked=FlagHelper::Get(task->m_Flags, TaskFlags::Locked);
+auto current_ptr=&m_Owner;
+BOOL suspend=false;
+while(*current_ptr)
+	{
+	auto current=*current_ptr;
+	assert(current!=task);
+	auto waiting=current->m_Waiting;
+	if(!waiting)
+		{
+		current->m_Waiting=task;
+		return true;
+		}
+	suspend=true;
+	if(locked&&!FlagHelper::Get(waiting->m_Flags, TaskFlags::Locked))
+		{
+		current->m_Waiting=task;
+		task->m_Waiting=waiting;
+		return true;
+		}
+	current_ptr=&current->m_Waiting;
+	}
+*current_ptr=task;
+return suspend;
+}
+
+BOOL Mutex::AddWaitingTask(Task* task, AccessMode)
+{
+BOOL locked=FlagHelper::Get(task->m_Flags, TaskFlags::Locked);
+auto current_ptr=&m_Owner;
+BOOL suspend=false;
+while(*current_ptr)
+	{
+	auto current=*current_ptr;
+	assert(current!=task);
+	auto waiting=current->m_Waiting;
+	if(!waiting)
+		{
+		if(FlagHelper::Get(current->m_Flags, TaskFlags::Sharing))
+			{
+			Scheduler::AddParallelTask(current_ptr, task);
+			return suspend;
+			}
+		current->m_Waiting=task;
+		return true;
+		}
+	suspend=true;
+	if(locked&&!FlagHelper::Get(waiting->m_Flags, TaskFlags::Locked))
+		{
+		if(FlagHelper::Get(waiting->m_Flags, TaskFlags::Sharing))
+			{
+			Scheduler::AddParallelTask(&current->m_Waiting, task);
+			return true;
+			}
+		current->m_Waiting=task;
+		task->m_Waiting=waiting;
+		return true;
+		}
+	current_ptr=&current->m_Waiting;
+	}
+*current_ptr=task;
+return suspend;
+}
+
+
 //================
 // Common Private
 //================
@@ -125,7 +196,7 @@ m_Owner=waiting;
 if(m_Owner)
 	Scheduler::ResumeTask(core, current, m_Owner);
 sched_lock.Yield();
-if(Scheduler::AddWaitingTask(&m_Owner, current))
+if(AddWaitingTask(current))
 	{
 	Scheduler::SuspendCurrentTask(core, current);
 	sched_lock.Yield();
@@ -147,7 +218,7 @@ if(!m_Owner)
 		Scheduler::ResumeTask(core, current, m_Owner);
 	}
 sched_lock.Yield();
-if(Scheduler::AddWaitingTask(&m_Owner, current, AccessMode::ReadOnly))
+if(AddWaitingTask(current, AccessMode::ReadOnly))
 	{
 	Scheduler::SuspendCurrentTask(core, current);
 	sched_lock.Yield();
