@@ -12,7 +12,6 @@
 #include "Concurrency/Scheduler.h"
 #include "Concurrency/SpinLock.h"
 #include "Concurrency/Task.h"
-#include "Concurrency/TaskHelper.h"
 #include "Devices/System/Cpu.h"
 #include "Devices/System/Interrupts.h"
 #include "Devices/System/System.h"
@@ -43,25 +42,22 @@ UINT core_count=++s_CoreCount;
 UINT core=Cpu::GetId();
 auto task=s_CurrentTask[core];
 lock.Unlock();
-Interrupts::Enable();
 Cpu::SetContext(&Task::TaskProc, task, task->m_StackPointer);
 }
 
 VOID Scheduler::Initialize()
 {
-Interrupts::Route(IRQ_TASK_SWITCH, IrqTarget::All);
-Interrupts::SetHandler(IRQ_TASK_SWITCH, HandleTaskSwitch);
+Interrupts::Route(Irq::TaskSwitch, IrqTarget::All);
+Interrupts::SetHandler(Irq::TaskSwitch, HandleTaskSwitch);
 for(UINT core=0; core<CPU_COUNT; core++)
 	{
 	auto idle=Task::CreateInternal(IdleTask, String::Create("idle%u", core));
-	idle->m_This=idle;
 	FlagHelper::Set(idle->m_Flags, TaskFlags::Idle);
 	FlagHelper::Set(idle->m_Flags, TaskFlags::Suspended);
 	s_IdleTask[core]=idle;
 	s_CurrentTask[core]=idle;
 	}
 auto main=Task::CreateInternal(MainTask, "main");
-main->m_This=main;
 s_CurrentTask[0]=main;
 s_MainTask=main;
 }
@@ -81,7 +77,6 @@ return current==s_MainTask;
 
 VOID Scheduler::AddTask(Task* task)
 {
-task->m_This=task;
 SpinLock lock(s_CriticalSection);
 UINT core=Cpu::GetId();
 auto current=s_CurrentTask[core];
@@ -534,7 +529,7 @@ for(UINT core_id=0; core_id<core_count; core_id++)
 	auto resume=GetWaitingTask();
 	FlagHelper::Clear(resume->m_Flags, TaskFlags::Suspended);
 	current->m_Next=resume;
-	Interrupts::Send(IRQ_TASK_SWITCH, core);
+	Interrupts::Send(Irq::TaskSwitch, core);
 	}
 }
 
@@ -559,7 +554,7 @@ if(!next)
 	next=s_IdleTask[core];
 FlagHelper::Clear(next->m_Flags, TaskFlags::Suspended);
 current->m_Next=next;
-Interrupts::Send(IRQ_TASK_SWITCH, core);
+Interrupts::Send(Irq::TaskSwitch, core);
 }
 
 UINT Scheduler::s_CoreCount=0;
