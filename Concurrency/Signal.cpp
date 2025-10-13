@@ -50,13 +50,13 @@ Scheduler::AddParallelTask(&m_Waiting, current);
 Scheduler::SuspendCurrentTask(core, current);
 lock.Yield();
 current->m_Signal=nullptr;
+lock.Unlock();
 if(current->Cancelled)
 	throw AbortException();
 }
 
 VOID Signal::Wait(UINT timeout)
 {
-assert(timeout!=0);
 assert(!Task::IsMainTask());
 UINT64 resume_time=SystemTimer::GetTickCount64()+timeout;
 SpinLock lock(Scheduler::s_CriticalSection);
@@ -67,6 +67,7 @@ Scheduler::AddParallelTask(&m_Waiting, current);
 Scheduler::SuspendCurrentTask(core, current, resume_time);
 lock.Yield();
 current->m_Signal=nullptr;
+lock.Unlock();
 if(current->Cancelled)
 	throw AbortException();
 if(current->m_ResumeTime)
@@ -84,6 +85,7 @@ Scheduler::AddParallelTask(&m_Waiting, current);
 Scheduler::SuspendCurrentTask(core, current);
 scoped_lock.Yield(lock);
 current->m_Signal=nullptr;
+lock.Unlock();
 if(current->Cancelled)
 	throw AbortException();
 }
@@ -101,6 +103,7 @@ Scheduler::AddParallelTask(&m_Waiting, current);
 Scheduler::SuspendCurrentTask(core, current, resume_time);
 scoped_lock.Yield(lock);
 current->m_Signal=nullptr;
+lock.Unlock();
 if(current->Cancelled)
 	throw AbortException();
 if(current->m_ResumeTime)
