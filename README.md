@@ -6,7 +6,8 @@ You can find a Blink-example for Raspberry Pi 5 <a href="https://github.com/sven
 </p>
 <br />
 
-<img src="https://github.com/user-attachments/assets/7b3ad189-6baa-4aae-8b48-adeccf4aed16" /><br />
+<img src="https://github.com/user-attachments/assets/87a25ddd-7b1a-41df-9a48-a9a93e1006fe" /><br />
+
 <br />
 
 <h2>Synchronization Primitives</h2>
