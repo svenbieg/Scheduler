@@ -6,7 +6,7 @@ You can find a Blink-example for Raspberry Pi 5 <a href="https://github.com/sven
 </p>
 <br />
 
-<img src="https://github.com/user-attachments/assets/87a25ddd-7b1a-41df-9a48-a9a93e1006fe" /><br />
+<img src="https://github.com/user-attachments/assets/cc3b285b-6a46-4e4f-a3c7-f1f6004a8a3c" width="400" /><br />
 
 <br />
 
