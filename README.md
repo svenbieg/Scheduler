@@ -2,7 +2,7 @@
 
 <p>
 This task-manager provides basic functionality for C++ applications.<br />
-You can find a Blink-example for Raspberry Pi 5 <a href="https://github.com/svenbieg/Blink">here</a>.
+You can find a Blink-example for Raspberry Pi <a href="https://github.com/svenbieg/Blink">here</a>.
 </p>
 <br />
 
