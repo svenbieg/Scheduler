@@ -184,8 +184,19 @@ if(sleeping)
 		auto owner=sleeping->m_Owner;
 		if(owner)
 			{
-			WaitingList::Remove(owner, sleeping);
 			sleeping->m_Owner=nullptr;
+			WaitingList::Remove(owner, sleeping);
+			}
+		auto signal_lock=sleeping->m_SignalLock;
+		if(signal_lock)
+			{
+			sleeping->m_SignalCount=0;
+			sleeping->m_SignalLock=nullptr;
+			if(!signal_lock->Lock(sleeping))
+				{
+				sleeping=next;
+				continue;
+				}
 			}
 		s_Waiting.Insert(sleeping, Task::Priority);
 		sleeping=next;
@@ -215,16 +226,6 @@ for(UINT u=0; u<CPU_COUNT; u++)
 			continue;
 		}
 	s_Waiting.RemoveFirst();
-	auto signal_lock=resume->m_SignalLock;
-	if(signal_lock)
-		{
-		resume->m_SignalCount=0;
-		resume->m_SignalLock=nullptr;
-		if(!signal_lock->Lock(resume))
-			resume=s_Waiting.RemoveFirst();
-		}
-	if(!resume)
-		break;
 	current->m_Next=resume;
 	if(irq)
 		Interrupts::Send(Irq::TaskSwitch, core);
